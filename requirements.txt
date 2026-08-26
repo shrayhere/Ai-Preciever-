@@ -1,8 +1,5 @@
---extra-index-url https://download.pytorch.org/whl/cpu
 flask
 pillow
 numpy
 opencv-python-headless
 exifread
-transformers
-torch
