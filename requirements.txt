@@ -1,0 +1,8 @@
+flask
+transformers
+torch
+pillow
+opencv-python
+numpy
+exifread
+sqlalchemy

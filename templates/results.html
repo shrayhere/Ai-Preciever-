@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forensic Report #{{ scan.id }} — DeepVerify</title>
+  <meta name="description" content="DeepVerify Detailed Forensic Analysis Report for scan ID {{ scan.id }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navigation Header -->
+  <header class="navbar">
+    <a href="/" class="brand">
+      <div class="brand-icon">DV</div>
+      <span class="brand-title">DeepVerify</span>
+      <span class="brand-tag">v1.0 FORENSIC</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">← Scan Another Image</a>
+    </nav>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+    
+    <!-- Report Summary Header -->
+    <div class="report-header">
+      <div class="report-title-group">
+        <h1>Forensic Audit Report</h1>
+        <div class="report-meta-list font-mono">
+          <span>Scan ID: #{{ scan.id }}</span>
+          <span>•</span>
+          <span>File: {{ scan.filename.split('_', 1)[-1] if '_' in scan.filename else scan.filename }}</span>
+          <span>•</span>
+          <span>Timestamp: {{ scan.upload_time }}</span>
+        </div>
+      </div>
+
+      <div class="report-summary-badge">
+        {% if scan.category == 'Likely Authentic' %}
+          <span class="badge badge-authentic" style="font-size: 1rem; padding: 0.5rem 1.25rem;">Likely Authentic</span>
+        {% elif scan.category == 'Possibly Manipulated' %}
+          <span class="badge badge-manipulated" style="font-size: 1rem; padding: 0.5rem 1.25rem;">Possibly Manipulated</span>
+        {% else %}
+          <span class="badge badge-ai" style="font-size: 1rem; padding: 0.5rem 1.25rem;">Likely AI-Generated</span>
+        {% endif %}
+
+        <div class="confidence-gauge">
+          <div class="confidence-value">{{ "%.1f"|format(scan.final_score) }}%</div>
+          <div class="confidence-label">Confidence</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Grid -->
+    <div class="report-grid">
+
+      <!-- Left Column: Visual Evidence Matrix -->
+      <div class="report-card">
+        <div class="report-card-title">
+          <span>Visual Forensic Evidence</span>
+          <span class="font-mono" style="font-size: 0.75rem; color: var(--text-secondary);">ELA & Noise Heatmap</span>
+        </div>
+
+        <div class="image-comparison">
+          <div class="image-box">
+            <div class="image-box-header">ORIGINAL UPLOAD</div>
+            <img src="{{ url_for('main.uploaded_file', filename=scan.filename) }}" alt="Original Image">
+          </div>
+
+          <div class="image-box">
+            <div class="image-box-header">FORENSIC HEATMAP (ELA/NOISE)</div>
+            {% if scan.heatmap_path %}
+              <img src="{{ url_for('main.uploaded_file', filename=scan.heatmap_path) }}" alt="Forensic Heatmap">
+            {% else %}
+              <div style="display: flex; align-items: center; justify-content: center; height: 240px; color: var(--text-muted); font-size: 0.8rem;">No heatmap generated</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="findings-box" style="margin-top: 1.5rem;">
+          <div class="findings-title">PLAIN-LANGUAGE EXPLANATION</div>
+          <div class="findings-text">{{ scan.explanation }}</div>
+        </div>
+      </div>
+
+      <!-- Right Column: Sub-score Signals & Metadata -->
+      <div class="report-card">
+        <div class="report-card-title">
+          <span>Sub-Signal Metrics</span>
+          <span class="font-mono" style="font-size: 0.75rem; color: var(--text-secondary);">0.0 to 1.0 Signal Risk</span>
+        </div>
+
+        <!-- AI Score Meter -->
+        <div class="metric-group">
+          <div class="metric-label-row">
+            <span class="metric-name">Neural AI Generation Classifier</span>
+            <span class="metric-score">{{ "%.3f"|format(scan.ai_score or 0.0) }}</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill {% if (scan.ai_score or 0) >= 0.5 %}fill-high{% elif (scan.ai_score or 0) >= 0.3 %}fill-med{% else %}fill-low{% endif %}"
+                 data-progress="{{ '%.1f'|format((scan.ai_score or 0.0) * 100) }}"></div>
+          </div>
+        </div>
+
+        <!-- Forensic Anomaly Meter -->
+        <div class="metric-group">
+          <div class="metric-label-row">
+            <span class="metric-name">Overall Forensic Anomaly Score</span>
+            <span class="metric-score">{{ "%.3f"|format(scan.forensic_score or 0.0) }}</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill {% if (scan.forensic_score or 0) >= 0.45 %}fill-high{% elif (scan.forensic_score or 0) >= 0.3 %}fill-med{% else %}fill-low{% endif %}"
+                 data-progress="{{ '%.1f'|format((scan.forensic_score or 0.0) * 100) }}"></div>
+          </div>
+        </div>
+
+        <!-- EXIF Metadata Flags -->
+        <div class="findings-box" style="margin-top: 1.5rem;">
+          <div class="findings-title">EXIF METADATA AUDIT FLAGS</div>
+          <ul class="flags-list">
+            {% if scan.metadata_flags %}
+              {% if scan.metadata_flags is string %}
+                <li>{{ scan.metadata_flags }}</li>
+              {% else %}
+                {% for flag in scan.metadata_flags %}
+                  <li>{{ flag }}</li>
+                {% endfor %}
+              {% endif %}
+            {% else %}
+              <li>No anomalous metadata signatures detected.</li>
+            {% endif %}
+          </ul>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+          <a href="/" class="btn btn-primary" style="width: 100%;">Scan Another Image</a>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    DeepVerify • Multi-Signal Image Forensics & AI Detection • Powered by Flask & PyTorch Transformer Pipelines
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('.progress-bar-fill[data-progress]').forEach(function(el) {
+        el.style.width = el.getAttribute('data-progress') + '%';
+      });
+    });
+  </script>
+</body>
+</html>

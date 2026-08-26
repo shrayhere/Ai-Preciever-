@@ -1,0 +1,29 @@
+# Python bytecode & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environments
+env/
+venv/
+.venv/
+ENV/
+
+# Vercel
+.vercel/
+
+# Database & local data
+*.db
+deepverify.db
+
+# User uploads
+static/uploads/*
+!static/uploads/.gitkeep
+
+# IDE / OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

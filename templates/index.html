@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepVerify — Image Authenticity & Deepfake Forensic Analysis</title>
+  <meta name="description" content="DeepVerify: AI-powered image authenticity and deepfake detection tool combining HuggingFace neural classification, Error Level Analysis (ELA), 2D FFT frequency noise checks, and EXIF metadata extraction.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navigation Header -->
+  <header class="navbar">
+    <a href="/" class="brand">
+      <div class="brand-icon">DV</div>
+      <span class="brand-title">DeepVerify</span>
+      <span class="brand-tag">v1.0 FORENSIC</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/" class="nav-link">Dashboard</a>
+      <a href="#history" class="nav-link">Recent Scans</a>
+    </nav>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="container">
+    
+    <div class="section-header">
+      <h1 class="section-title">Image Authenticity Workspace</h1>
+      <p class="section-subtitle">Multi-signal forensic audit: neural AI generation detection, JPEG Error Level Analysis (ELA), 2D FFT noise patterns, and EXIF metadata validation.</p>
+    </div>
+
+    <!-- Upload Card -->
+    <div class="upload-card">
+      <div class="dropzone" id="dropzone">
+        <div class="dropzone-icon">⤓</div>
+        <div class="dropzone-title">Drag & Drop Image for Forensic Audit</div>
+        <div class="dropzone-text">Supports JPG, JPEG, PNG (Max file size: 10MB)</div>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" style="display: none;">
+      </div>
+
+      <!-- File Preview Container -->
+      <div class="preview-container" id="previewContainer">
+        <div class="preview-grid">
+          <div class="preview-img-wrapper">
+            <img id="previewImg" class="preview-img" src="" alt="Selected Preview">
+          </div>
+          <div class="preview-info">
+            <div class="preview-filename" id="previewFilename">filename.jpg</div>
+            <div class="preview-meta" id="previewMeta">0.0 MB</div>
+            <div class="preview-actions">
+              <button type="button" class="btn btn-primary" id="btnAnalyze">Analyze Authenticity</button>
+              <button type="button" class="btn btn-secondary" id="btnRemove">Remove File</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Running Forensic & AI Pipeline...</div>
+        <div class="loading-subtext">Executing HuggingFace Classifier, ELA Difference Matrix, FFT Frequency Transforms, and EXIF Inspection</div>
+      </div>
+
+      <!-- Error Banner -->
+      <div class="error-banner" id="errorBanner"></div>
+    </div>
+
+    <!-- Scan History Audit Log -->
+    <div class="section-header" id="history" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 class="section-title">Recent Scan Audit Log</h2>
+        <p class="section-subtitle">History of previous image authenticity analyses (showing last 7 scans).</p>
+      </div>
+      {% if recent_scans %}
+        <button type="button" class="btn btn-secondary" id="btnClearHistory" onclick="clearAuditLog()" style="border-color: rgba(218, 54, 51, 0.4); color: var(--badge-ai-text);">
+          🗑️ Clear Audit Log
+        </button>
+      {% endif %}
+    </div>
+
+    <div class="history-card">
+      <div class="table-responsive">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Scan ID</th>
+              <th>Filename</th>
+              <th>Timestamp</th>
+              <th>Category Verdict</th>
+              <th>Confidence Score</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if recent_scans %}
+              {% for scan in recent_scans %}
+                <tr>
+                  <td class="font-mono">#{{ scan.id }}</td>
+                  <td class="font-mono">{{ scan.filename.split('_', 1)[-1] if '_' in scan.filename else scan.filename }}</td>
+                  <td class="font-mono">{{ scan.upload_time }}</td>
+                  <td>
+                    {% if scan.category == 'Likely Authentic' %}
+                      <span class="badge badge-authentic">Likely Authentic</span>
+                    {% elif scan.category == 'Possibly Manipulated' %}
+                      <span class="badge badge-manipulated">Possibly Manipulated</span>
+                    {% else %}
+                      <span class="badge badge-ai">Likely AI-Generated</span>
+                    {% endif %}
+                  </td>
+                  <td class="font-mono">{{ "%.1f"|format(scan.final_score) }}%</td>
+                  <td>
+                    <a href="/results/{{ scan.id }}" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">View Report</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No scans recorded yet. Upload an image above to perform your first forensic audit.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    DeepVerify • Multi-Signal Image Forensics & AI Detection • Powered by Flask & PyTorch Transformer Pipelines
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
