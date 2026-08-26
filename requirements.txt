@@ -1,8 +1,8 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 flask
+pillow
+numpy
+opencv-python-headless
+exifread
 transformers
 torch
-pillow
-opencv-python
-numpy
-exifread
-sqlalchemy
