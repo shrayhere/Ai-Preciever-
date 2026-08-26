@@ -1,6 +1,11 @@
 # DeepVerify (AI-Preciever) — AI Image Authenticity & Deepfake Detection Platform
 
+[![Live Demo](https://img.shields.io/badge/Vercel-Live_Demo-000000?style=for-the-badge&logo=vercel)](https://deepverify-beige.vercel.app)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Ai--Preciever--181717?style=for-the-badge&logo=github)](https://github.com/shrayhere/Ai-Preciever-)
+
 DeepVerify is a web-based multi-signal image forensic analysis platform built with Python, Flask, PyTorch, and Hugging Face Vision Transformers. It evaluates uploaded images (JPG/JPEG/PNG) to determine whether they are **Likely Authentic**, **Possibly Manipulated**, or **Likely AI-Generated**, providing an explainable breakdown of forensic sub-scores, EXIF metadata, and generated Error Level Analysis (ELA) heatmaps.
+
+🌐 **Live Deployment URL:** [https://deepverify-beige.vercel.app](https://deepverify-beige.vercel.app)
 
 ---
 
@@ -90,25 +95,7 @@ deepverify/
 
 ---
 
-## 🧪 Running Tests
+## 🌐 Live Vercel Deployment
 
-```bash
-# Test individual detectors
-python tests/test_detectors.py
-
-# Test routes & standalone API logic
-python tests/test_routes_standalone.py
-
-# Test clear history functionality
-python -c "from database.models import ScanRecord; print(ScanRecord.get_recent(7))"
-```
-
----
-
-## 🌐 Deployment
-
-Designed for deployment on **Vercel** serverless Python runtime. Includes `vercel.json` configuration for single-command deployment:
-
-```bash
-vercel --prod
-```
+- **Live URL:** [https://deepverify-beige.vercel.app](https://deepverify-beige.vercel.app)
+- **Deployment Command:** `vercel --prod`
