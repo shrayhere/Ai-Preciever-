@@ -1,9 +1,17 @@
 import os
 import io
-import cv2
 import numpy as np
-from PIL import Image, ImageChops, ImageEnhance
+from PIL import Image, ImageChops, ImageEnhance, ImageFilter
 from .base_detector import BaseDetector
+
+def apply_jet_colormap(gray_arr: np.ndarray) -> np.ndarray:
+    """Applies JET colormap to 2D uint8 numpy array, returning RGB uint8 array."""
+    x = np.clip(gray_arr.astype(float) / 255.0, 0.0, 1.0)
+    r = np.clip(1.5 - np.abs(4.0 * x - 3.0), 0.0, 1.0)
+    g = np.clip(1.5 - np.abs(4.0 * x - 2.0), 0.0, 1.0)
+    b = np.clip(1.5 - np.abs(4.0 * x - 1.0), 0.0, 1.0)
+    rgb = np.stack([r, g, b], axis=-1) * 255.0
+    return rgb.astype(np.uint8)
 
 class ForensicsDetector(BaseDetector):
     def __init__(self, ela_quality: int = 90, scale: int = 15):
@@ -83,13 +91,11 @@ class ForensicsDetector(BaseDetector):
 
     def _compute_fft_analysis(self, image_path: str):
         """2D Fourier Transform to analyze frequency domain noise patterns."""
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            pil_img = Image.open(image_path).convert("L")
-            img = np.array(pil_img)
+        pil_img = Image.open(image_path).convert("L")
+        img = np.array(pil_img, dtype=float)
 
         # 2D FFT
-        f = np.fft.fft2(img.astype(float))
+        f = np.fft.fft2(img)
         fshift = np.fft.fftshift(f)
         magnitude = 20 * np.log(np.abs(fshift) + 1e-8)
 
@@ -116,16 +122,15 @@ class ForensicsDetector(BaseDetector):
 
     def _compute_block_noise_consistency(self, image_path: str, block_size: int = 32):
         """Splits noise residual into grid blocks and computes local noise variance consistency."""
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        if img is None:
-            pil_img = Image.open(image_path).convert("L")
-            img = np.array(pil_img)
+        pil_img = Image.open(image_path).convert("L")
+        img_arr = np.array(pil_img, dtype=np.float32)
 
-        h, w = img.shape
+        h, w = img_arr.shape
         
         # Extract noise residual by subtracting Gaussian blurred background
-        blurred = cv2.GaussianBlur(img, (3, 3), 0)
-        noise_residual = cv2.absdiff(img, blurred)
+        blurred_pil = pil_img.filter(ImageFilter.GaussianBlur(radius=1.0))
+        blurred_arr = np.array(blurred_pil, dtype=np.float32)
+        noise_residual = np.abs(img_arr - blurred_arr)
 
         blocks_y = h // block_size
         blocks_x = w // block_size
@@ -148,25 +153,43 @@ class ForensicsDetector(BaseDetector):
         # Normal portrait photos naturally have COV ~1.5 - 2.5 between background & subject textures
         noise_score = min(1.0, max(0.0, (cov - 2.5) / 3.0))
 
-        block_variance_map = cv2.resize(variance_grid, (w, h), interpolation=cv2.INTER_NEAREST)
+        # Resize variance grid to full image size
+        grid_pil = Image.fromarray(variance_grid)
+        resized_grid = grid_pil.resize((w, h), Image.NEAREST)
+        block_variance_map = np.array(resized_grid, dtype=np.float32)
+
         return float(noise_score), block_variance_map
 
     def _generate_heatmap(self, image_path: str, ela_diff_arr: np.ndarray, block_variance_map: np.ndarray, output_dir: str = None) -> str:
         """Generates and saves visual forensic color heatmap image."""
-        gray_ela = cv2.cvtColor(ela_diff_arr, cv2.COLOR_RGB2GRAY)
-        
-        norm_var = cv2.normalize(block_variance_map, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        combined_map = cv2.addWeighted(gray_ela, 0.6, norm_var, 0.4, 0)
-        
-        color_heatmap = cv2.applyColorMap(combined_map, cv2.COLORMAP_JET)
+        if ela_diff_arr.ndim == 3:
+            gray_ela = np.mean(ela_diff_arr, axis=2).astype(np.float32)
+        else:
+            gray_ela = ela_diff_arr.astype(np.float32)
+
+        bv_min, bv_max = block_variance_map.min(), block_variance_map.max()
+        if bv_max > bv_min:
+            norm_var = ((block_variance_map - bv_min) / (bv_max - bv_min)) * 255.0
+        else:
+            norm_var = np.zeros_like(block_variance_map, dtype=np.float32)
+
+        combined_map = (gray_ela * 0.6 + norm_var * 0.4)
+        combined_norm = np.clip(combined_map, 0, 255).astype(np.uint8)
+
+        color_heatmap_rgb = apply_jet_colormap(combined_norm)
 
         if output_dir is None:
             output_dir = os.path.join(os.path.dirname(image_path), "..", "static", "uploads")
 
-        os.makedirs(output_dir, exist_ok=True)
+        try:
+            os.makedirs(output_dir, exist_ok=True)
+        except Exception:
+            pass
+
         base_name = os.path.splitext(os.path.basename(image_path))[0]
         heatmap_filename = f"heatmap_{base_name}.png"
         save_path = os.path.join(output_dir, heatmap_filename)
 
-        cv2.imwrite(save_path, color_heatmap)
+        Image.fromarray(color_heatmap_rgb).save(save_path)
         return heatmap_filename
+
