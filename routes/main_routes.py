@@ -64,9 +64,15 @@ def analyze():
     orig_name = secure_filename(file.filename)
     ext = orig_name.rsplit('.', 1)[-1].lower() if '.' in orig_name else 'jpg'
     unique_filename = f"{uuid.uuid4().hex}_{orig_name}"
-    save_path = os.path.join(Config.UPLOAD_FOLDER, unique_filename)
     
+    try:
+        os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+    except Exception:
+        pass
+
+    save_path = os.path.join(Config.UPLOAD_FOLDER, unique_filename)
     file.save(save_path)
+
 
     try:
         # Run detection pipeline
@@ -146,6 +152,8 @@ def clear_history():
         flash("Failed to clear audit history.", "error")
         return redirect(url_for("main.index"))
 
+from flask import Response
+
 @main_bp.route("/uploads/<filename>")
 def uploaded_file(filename):
     if os.path.isfile(os.path.join(Config.UPLOAD_FOLDER, filename)):
@@ -153,5 +161,8 @@ def uploaded_file(filename):
     fallback_dir = os.path.join(Config.BASE_DIR, "static", "uploads")
     if os.path.isfile(os.path.join(fallback_dir, filename)):
         return send_from_directory(fallback_dir, filename)
-    return "File not found", 404
+    # 1x1 transparent PNG pixel fallback if file is missing in serverless instance
+    transparent_png = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc\xf8\x0f\x00\x01\x01\x01\x00\x1b\xb6\xee\x56\x00\x00\x00\x00IEND\xaeB`\x82'
+    return Response(transparent_png, mimetype="image/png")
+
 

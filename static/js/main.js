@@ -117,25 +117,34 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         body: formData
       })
-      .then(res => res.json())
+      .then(async res => {
+        const isJson = res.headers.get('content-type')?.includes('application/json');
+        const data = isJson ? await res.json() : null;
+        if (!res.ok) {
+          const errMsg = (data && data.error) ? data.error : `Server response error (${res.status})`;
+          throw new Error(errMsg);
+        }
+        return data;
+      })
       .then(data => {
-        if (data.success) {
+        if (data && data.success) {
           window.location.href = data.redirect_url;
         } else {
           loadingOverlay.style.display = 'none';
           btnAnalyze.disabled = false;
-          showError(data.error || 'Analysis failed.');
+          showError((data && data.error) || 'Analysis failed.');
         }
       })
       .catch(err => {
         loadingOverlay.style.display = 'none';
         btnAnalyze.disabled = false;
-        showError('Server error during analysis. Please try again.');
+        showError(err.message || 'Server error during analysis. Please try again.');
         console.error(err);
       });
     });
   }
 });
+
 
 window.clearAuditLog = function() {
   if (confirm("Are you sure you want to clear all recent scan audit logs and permanently delete all past saved image data?")) {

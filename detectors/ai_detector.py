@@ -1,3 +1,4 @@
+import os
 import logging
 import numpy as np
 from PIL import Image
@@ -9,7 +10,9 @@ class AIDetector(BaseDetector):
     def __init__(self, model_name: str = "umm-maybe/AI-image-detector"):
         self.model_name = model_name
         self._pipe = None
-        self._transformers_available = True
+        # On Vercel serverless platform, disable HuggingFace remote model downloads to prevent 10s execution timeouts
+        is_serverless = bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+        self._transformers_available = not is_serverless
 
     def _get_pipeline(self):
         if self._pipe is None and self._transformers_available:
@@ -22,6 +25,7 @@ class AIDetector(BaseDetector):
                 self._transformers_available = False
                 self._pipe = None
         return self._pipe
+
 
     def analyze(self, image_path: str) -> dict:
         try:

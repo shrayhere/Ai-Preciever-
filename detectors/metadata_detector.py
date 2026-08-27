@@ -18,13 +18,19 @@ AI_GENERATOR_SIGNATURES = [
 class MetadataDetector(BaseDetector):
     def analyze(self, image_path: str) -> dict:
         """
-        Extracts EXIF metadata and filename signatures, checking for
+        Extracts EXIF metadata, PNG chunks, and filename signatures, checking for
         editing software or AI generator signatures.
         """
         try:
             filename = os.path.basename(image_path).lower()
             img = Image.open(image_path)
-            exif_raw = img._getexif()
+            
+            exif_raw = None
+            if hasattr(img, "_getexif") and callable(img._getexif):
+                try:
+                    exif_raw = img._getexif()
+                except Exception:
+                    exif_raw = None
 
             exif_data = {}
             if exif_raw:
@@ -37,18 +43,24 @@ class MetadataDetector(BaseDetector):
                             value = str(value)
                     exif_data[str(tag)] = str(value)
 
+            png_info_str = ""
+            if hasattr(img, "info") and isinstance(img.info, dict):
+                for k, v in img.info.items():
+                    if isinstance(v, (str, bytes)):
+                        png_info_str += f" {k} {v}"
+
             make = exif_data.get("Make", "").strip()
             model = exif_data.get("Model", "").strip()
             software = exif_data.get("Software", "").strip()
             image_desc = exif_data.get("ImageDescription", "").strip()
             user_comment = exif_data.get("UserComment", "").strip()
 
-            all_text_metadata = f"{filename} {software} {image_desc} {user_comment}".lower()
+            all_text_metadata = f"{filename} {software} {image_desc} {user_comment} {png_info_str}".lower()
 
             flags = []
             metadata_score = 0.0
 
-            # 1. Check AI Generator signatures in EXIF and Filename
+            # 1. Check AI Generator signatures in Metadata and Filename
             ai_detected = [sig for sig in AI_GENERATOR_SIGNATURES if sig in all_text_metadata]
             if ai_detected:
                 flags.append(f"AI generator signature detected in file metadata: {', '.join(ai_detected)}")
@@ -93,3 +105,4 @@ class MetadataDetector(BaseDetector):
                 "raw_exif": {},
                 "status": "warning"
             }
+
